@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>📸 Snap to Sheet</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #00c6ff, #0072ff);
+      color: #fff;
+      text-align: center;
+      padding: 2rem;
+      margin: 0;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    input, button {
+      margin: 1rem 0;
+      padding: 0.75rem;
+      width: 100%;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+      font-weight: bold;
+    }
+    input {
+      background: #fff;
+      color: #333;
+    }
+    button {
+      background: #fff;
+      color: #0072ff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #e0e0e0;
+    }
+    #status {
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+    .spinner {
+      display: none;
+      margin: 1rem auto;
+      width: 40px;
+      height: 40px;
+      border: 4px solid #fff;
+      border-top: 4px solid #0072ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <h1>📸 Snap to Sheet</h1>
+  <div class="card">
+    <input type="file" accept="image/*" capture="environment" id="fileInput" />
+    <button id="uploadBtn">Upload to Sheet</button>
+    <div class="spinner" id="spinner"></div>
+    <div id="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const spinner   = document.getElementById('spinner');
+    const status    = document.getElementById('status');
+
+    uploadBtn.addEventListener('click', () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        status.textContent = "⚠️ Please select a photo.";
+        return;
+      }
+
+      // Validate file type
+      const validTypes = ["image/jpeg", "image/png", "image/gif"];
+      if (!validTypes.includes(file.type)) {
+        status.textContent = "⚠️ Invalid file type. Please upload a JPEG, PNG, or GIF image.";
+        return;
+      }
+
+      // Debugging: Log file details to ensure the file is selected
+      console.log("Selected file: ", file);
+      console.log("File type: ", file.type);
+      console.log("File size: ", file.size);
+
+      spinner.style.display = 'block';
+      status.textContent = '⏳ Reading image…';
+
+      // Create a FormData object and append the file
+      const formData = new FormData();
+      formData.append("image", file);
+
+      // Send the FormData object to Google Apps Script using Fetch API
+    fetch("https://script.google.com/macros/s/AKfycby8cpsiDdLclfcR9bHULOcbOZUvrXI56qWoKAQNbyhmGqKu3J5T8xOSLSfOylLWPI3dWg/exec", {
+  method: "POST",
+  body: formData,
+  // ✅ Allow Apps Script to treat this as raw POST
+  muteHttpExceptions: true // Optional, useful if you want full error messages
+})
+.then(async response => {
+  const text = await response.text();
+  try {
+    const result = JSON.parse(text); // ✅ Safe parse
+    spinner.style.display = 'none';
+    if (result.status === "success") {
+      status.textContent = result.message;
+    } else {
+      status.textContent = "❌ Upload failed: " + result.message;
+    }
+  } catch (err) {
+    spinner.style.display = 'none';
+    status.textContent = "❌ Unexpected response: " + text;
+    console.error("Parse error:", err, "Raw response:", text);
+  }
+})
+.catch(error => {
+  spinner.style.display = 'none';
+  status.textContent = "❌ Upload failed: " + error.message;
+});
+
+    });
+  </script>
+</body>
+</html>
